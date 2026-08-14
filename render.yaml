@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: npm ci && npm run db:generate && npm run db:deploy && npm run db:seed-if-empty && npm run build && npm run build:server
+    buildCommand: npm ci --include=dev && npm run db:generate && npm run db:deploy && npm run db:seed-if-empty && npm run build && npm run build:server
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
