@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: rally-court-club-demo
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm run db:generate && npm run db:deploy && npm run db:seed-if-empty && npm run build && npm run build:server
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: EMAIL_API_URL
+        value: https://api.resend.com/emails
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false

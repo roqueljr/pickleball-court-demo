@@ -1,0 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, CheckCircle2, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import type { Court } from "../types";
+
+export function Courts() {
+  const query = useQuery({ queryKey: ["courts"], queryFn: () => apiFetch<{ courts: Court[] }>("/api/courts") });
+  if (query.isLoading) return <div className="grid min-h-[60vh] place-items-center bg-sand text-ink/50">Loading courts…</div>;
+  if (query.isError) return <div className="mx-auto max-w-3xl px-5 py-20 text-center text-red-700">Unable to load courts. Please try again.</div>;
+  return <main className="bg-sand px-5 py-16 lg:px-8"><div className="mx-auto max-w-7xl"><p className="text-sm font-bold uppercase tracking-[.18em] text-pine">Find your court</p><h1 className="mt-3 max-w-2xl text-5xl font-semibold tracking-tight">Space for every kind of rally.</h1><p className="mt-5 max-w-xl text-lg leading-8 text-ink/60">Reserve a pro-grade indoor or open-air court with real-time availability.</p><div className="mt-10 grid gap-5 md:grid-cols-2">{query.data?.courts.map((court) => <article key={court.id} className="overflow-hidden rounded-3xl bg-white shadow-sm"><div className="aspect-video bg-pine">{court.imageUrl ? <img src={court.imageUrl} alt={court.name} className="h-full w-full object-cover" width={1280} height={720} loading="lazy" decoding="async" /> : <div className="grid h-full place-items-center bg-gradient-to-br from-pine to-ink text-6xl font-semibold text-lime">{court.name.replace("Court ", "")}</div>}</div><div className="p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="text-2xl font-semibold">{court.name}</h2><p className="mt-2 text-sm text-ink/55">{court.description}</p></div><span className="rounded-full bg-lime/60 px-3 py-1 text-xs font-bold text-pine">₱{court.hourlyRate.toLocaleString()}/hr</span></div><div className="mt-5 flex flex-wrap gap-4 text-sm text-ink/55"><span><MapPin className="mr-1 inline text-pine" size={15} />{court.location}</span><span><CheckCircle2 className="mr-1 inline text-pine" size={15} />{court.indoor ? "Indoor" : "Open air"}</span></div><Link to="/app/book" className="mt-6 block rounded-xl bg-pine px-4 py-3 text-center text-sm font-semibold text-white">Check availability <ArrowRight className="ml-1 inline" size={16} /></Link></div></article>)}</div></div></main>;
+}

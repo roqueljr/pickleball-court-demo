@@ -1,0 +1,1025 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleCode {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+  COACH
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum CourtStatus {
+  AVAILABLE
+  MAINTENANCE
+  CLOSED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  GCASH
+  CARD
+  ONLINE_PAYMENT
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+enum CoachStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SessionStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum EquipmentStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SaleStatus {
+  DRAFT
+  COMPLETED
+  REFUNDED
+}
+
+enum NotificationType {
+  BOOKING
+  PAYMENT
+  MEMBERSHIP
+  PROMOTION
+  SCHEDULE
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  WATER
+  INTERNET
+  SALARIES
+  MAINTENANCE
+  EQUIPMENT
+  MARKETING
+  SUPPLIES
+  OTHER
+}
+
+enum TournamentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentFormat {
+  SINGLES
+  DOUBLES
+  MIXED_DOUBLES
+  ROUND_ROBIN
+}
+
+enum TournamentRegistrationMode {
+  INDIVIDUAL
+  TEAM
+  BOTH
+}
+
+enum TournamentRegistrationStatus {
+  PENDING
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+}
+
+enum WaitlistStatus {
+  WAITING
+  OFFERED
+  CLAIMED
+  EXPIRED
+  CANCELLED
+}
+
+enum OpenPlayStatus {
+  OPEN
+  FILLED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum OpenPlayParticipantStatus {
+  JOINED
+  PAID
+  CANCELLED
+}
+
+enum AccessPassStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+  REFUND
+  ADJUSTMENT
+}
+
+enum PackagePurchaseStatus {
+  PENDING
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+  CANCELLED
+}
+
+enum LeagueStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum LeagueEntryStatus {
+  PENDING
+  ACTIVE
+  WITHDRAWN
+}
+
+enum LeagueMatchStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AutomationKind {
+  WIN_BACK
+  MEMBERSHIP_EXPIRY
+  BIRTHDAY
+  PROMOTION
+}
+
+enum AutomationStatus {
+  ACTIVE
+  PAUSED
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  code        RoleCode         @unique
+  name        String           @unique
+  description String?
+  users       UserRole[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model User {
+  id                         String               @id @default(cuid())
+  email                      String               @unique
+  passwordHash               String
+  firstName                  String
+  lastName                   String
+  phone                      String?
+  status                     UserStatus           @default(ACTIVE)
+  emailVerifiedAt            DateTime?
+  emailVerificationTokenHash String?
+  emailVerificationExpiresAt DateTime?
+  passwordResetTokenHash     String?
+  passwordResetExpiresAt     DateTime?
+  lastLoginAt                DateTime?
+  refreshTokenHash           String?
+  roles                      UserRole[]
+  customer                   Customer?
+  staff                      Staff?
+  coach                      Coach?
+  createdBookings            Booking[]            @relation("CreatedBookings")
+  recordedPayments           Payment[]            @relation("RecordedPayments")
+  createdExpenses            Expense[]            @relation("CreatedExpenses")
+  notifications              Notification[]
+  auditLogs                  AuditLog[]
+  checkIns                   BookingCheckIn[]
+  createdOpenPlays           OpenPlay[]           @relation("CreatedOpenPlays")
+  automationCampaigns        AutomationCampaign[] @relation("CreatedAutomationCampaigns")
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+}
+
+model Customer {
+  id                   String                @id @default(cuid())
+  userId               String                @unique
+  address              String?
+  notes                String?
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings             Booking[]
+  payments             Payment[]
+  memberships          Membership[]
+  coachingSessions     CoachingSession[]
+  equipmentRentals     EquipmentRental[]
+  notifications        Notification[]
+  sales                Sale[]
+  skillRating          Decimal               @default(3.00) @db.Decimal(4, 2)
+  duprId               String?               @unique
+  walletBalance        Decimal               @default(0) @db.Decimal(12, 2)
+  marketingConsent     Boolean               @default(false)
+  dateOfBirth          DateTime?
+  lastActivityAt       DateTime?
+  waitlistEntries      CourtWaitlistEntry[]
+  openPlayParticipants OpenPlayParticipant[]
+  walletTransactions   WalletTransaction[]
+  walletTopUps         WalletTopUp[]
+  packagePurchases     PackagePurchase[]
+  leagueEntries        LeagueEntry[]
+  guestLeads           GuestLead[]           @relation("ConvertedGuestCustomer")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
+}
+
+model Staff {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  employeeNo String?  @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Coach {
+  id             String            @id @default(cuid())
+  userId         String            @unique
+  biography      String?
+  experience     String?
+  certifications String?
+  hourlyRate     Decimal           @default(0) @db.Decimal(12, 2)
+  status         CoachStatus       @default(ACTIVE)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions       CoachingSession[] @relation("CoachSessions")
+  bookings       Booking[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model Court {
+  id              String               @id @default(cuid())
+  name            String               @unique
+  description     String?
+  location        String?
+  indoor          Boolean              @default(true)
+  surfaceType     String?
+  status          CourtStatus          @default(AVAILABLE)
+  openingTime     String               @default("06:00")
+  closingTime     String               @default("22:00")
+  hourlyRate      Decimal              @db.Decimal(12, 2)
+  imageUrl        String?
+  features        Json?
+  schedules       CourtSchedule[]
+  bookings        Booking[]
+  sessions        CoachingSession[]
+  waitlistEntries CourtWaitlistEntry[]
+  openPlays       OpenPlay[]
+  pricingRules    DynamicPricingRule[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  deletedAt       DateTime?
+
+  @@index([status])
+}
+
+model CourtSchedule {
+  id        String   @id @default(cuid())
+  courtId   String
+  weekday   Int
+  startTime String
+  endTime   String
+  isBlocked Boolean  @default(false)
+  reason    String?
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courtId, weekday])
+}
+
+model Booking {
+  id                String              @id @default(cuid())
+  reference         String              @unique
+  customerId        String
+  courtId           String
+  coachId           String?
+  membershipId      String?
+  packagePurchaseId String?
+  createdById       String?
+  startsAt          DateTime
+  endsAt            DateTime
+  durationMinutes   Int
+  status            BookingStatus       @default(PENDING)
+  subtotal          Decimal             @db.Decimal(12, 2)
+  discount          Decimal             @default(0) @db.Decimal(12, 2)
+  tax               Decimal             @default(0) @db.Decimal(12, 2)
+  total             Decimal             @db.Decimal(12, 2)
+  promoCode         String?
+  qrToken           String              @unique @default(cuid())
+  cancelledAt       DateTime?
+  cancelledReason   String?
+  customer          Customer            @relation(fields: [customerId], references: [id])
+  court             Court               @relation(fields: [courtId], references: [id])
+  coach             Coach?              @relation(fields: [coachId], references: [id])
+  membership        Membership?         @relation(fields: [membershipId], references: [id])
+  packagePurchase   PackagePurchase?    @relation(fields: [packagePurchaseId], references: [id])
+  createdBy         User?               @relation("CreatedBookings", fields: [createdById], references: [id])
+  items             BookingItem[]
+  payments          Payment[]
+  checkIn           BookingCheckIn?
+  accessPass        BookingAccessPass?
+  waitlistClaim     CourtWaitlistEntry?
+  guestLead         GuestLead?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([courtId, startsAt, endsAt])
+  @@index([customerId, status])
+}
+
+model BookingItem {
+  id          String  @id @default(cuid())
+  bookingId   String
+  itemType    String
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(12, 2)
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model BookingCheckIn {
+  id          String   @id @default(cuid())
+  bookingId   String   @unique
+  checkedById String
+  checkedAt   DateTime @default(now())
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  checkedBy   User     @relation(fields: [checkedById], references: [id])
+}
+
+model Payment {
+  id                    String               @id @default(cuid())
+  bookingId             String?
+  customerId            String
+  membershipId          String?
+  packagePurchaseId     String?
+  openPlayParticipantId String?              @unique
+  leagueEntryId         String?              @unique
+  coachingSessionId     String?              @unique
+  recordedById          String?
+  amount                Decimal              @db.Decimal(12, 2)
+  discount              Decimal              @default(0) @db.Decimal(12, 2)
+  tax                   Decimal              @default(0) @db.Decimal(12, 2)
+  finalAmount           Decimal              @db.Decimal(12, 2)
+  method                PaymentMethod
+  status                PaymentStatus        @default(PENDING)
+  transactionReference  String?              @unique
+  paidAt                DateTime?
+  booking               Booking?             @relation(fields: [bookingId], references: [id])
+  customer              Customer             @relation(fields: [customerId], references: [id])
+  membership            Membership?          @relation(fields: [membershipId], references: [id])
+  packagePurchase       PackagePurchase?     @relation(fields: [packagePurchaseId], references: [id])
+  openPlayParticipant   OpenPlayParticipant? @relation(fields: [openPlayParticipantId], references: [id])
+  leagueEntry           LeagueEntry?         @relation(fields: [leagueEntryId], references: [id])
+  coachingSession       CoachingSession?     @relation(fields: [coachingSessionId], references: [id])
+  walletTopUp           WalletTopUp?
+  recordedBy            User?                @relation("RecordedPayments", fields: [recordedById], references: [id])
+  refunds               Refund[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([customerId, status])
+}
+
+model Refund {
+  id            String   @id @default(cuid())
+  paymentId     String
+  processedById String?
+  amount        Decimal  @db.Decimal(12, 2)
+  reason        String?
+  processedAt   DateTime @default(now())
+  payment       Payment  @relation(fields: [paymentId], references: [id])
+}
+
+model MembershipPlan {
+  id                String       @id @default(cuid())
+  name              String       @unique
+  description       String?
+  price             Decimal      @db.Decimal(12, 2)
+  durationDays      Int
+  discountPercent   Decimal      @default(0) @db.Decimal(5, 2)
+  bookingPrivileges Json?
+  maximumBookings   Int?
+  isActive          Boolean      @default(true)
+  memberships       Membership[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Membership {
+  id         String           @id @default(cuid())
+  customerId String
+  planId     String
+  startDate  DateTime
+  endDate    DateTime
+  status     MembershipStatus @default(PENDING)
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  plan       MembershipPlan   @relation(fields: [planId], references: [id])
+  bookings   Booking[]
+  payments   Payment[]
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([customerId, status])
+}
+
+model Promotion {
+  id                 String           @id @default(cuid())
+  code               String           @unique
+  discountPercent    Decimal?         @db.Decimal(5, 2)
+  fixedDiscount      Decimal?         @db.Decimal(12, 2)
+  startDate          DateTime
+  endDate            DateTime
+  usageLimit         Int?
+  usedCount          Int              @default(0)
+  minimumPurchase    Decimal          @default(0) @db.Decimal(12, 2)
+  applicableCourtIds Json?
+  applicablePlanIds  Json?
+  isActive           Boolean          @default(true)
+  usages             PromotionUsage[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model PromotionUsage {
+  id          String    @id @default(cuid())
+  promotionId String
+  customerId  String
+  bookingId   String?
+  usedAt      DateTime  @default(now())
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+}
+
+model CoachingSession {
+  id         String        @id @default(cuid())
+  coachId    String
+  customerId String
+  courtId    String?
+  startsAt   DateTime
+  endsAt     DateTime
+  rate       Decimal       @db.Decimal(12, 2)
+  status     SessionStatus @default(PENDING)
+  notes      String?
+  coach      Coach         @relation("CoachSessions", fields: [coachId], references: [id])
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  court      Court?        @relation(fields: [courtId], references: [id])
+  payment    Payment?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([coachId, startsAt, endsAt])
+}
+
+model Equipment {
+  id                String            @id @default(cuid())
+  name              String
+  quantity          Int               @default(0)
+  availableQuantity Int               @default(0)
+  rentalPrice       Decimal           @db.Decimal(12, 2)
+  status            EquipmentStatus   @default(ACTIVE)
+  rentals           EquipmentRental[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model EquipmentRental {
+  id          String    @id @default(cuid())
+  equipmentId String
+  customerId  String
+  bookingId   String?
+  quantity    Int
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  startsAt    DateTime
+  endsAt      DateTime
+  status      String    @default("RESERVED")
+  returnedAt  DateTime?
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([bookingId, status])
+  @@index([equipmentId, status])
+}
+
+model ProductCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id                String           @id @default(cuid())
+  sku               String           @unique
+  name              String
+  categoryId        String?
+  description       String?
+  price             Decimal          @db.Decimal(12, 2)
+  cost              Decimal          @default(0) @db.Decimal(12, 2)
+  stock             Int              @default(0)
+  lowStockThreshold Int              @default(5)
+  status            ProductStatus    @default(ACTIVE)
+  category          ProductCategory? @relation(fields: [categoryId], references: [id])
+  saleItems         SaleItem[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model Sale {
+  id            String        @id @default(cuid())
+  customerId    String?
+  total         Decimal       @db.Decimal(12, 2)
+  status        SaleStatus    @default(COMPLETED)
+  paymentMethod PaymentMethod
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+  createdAt     DateTime      @default(now())
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  productId String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  category      ExpenseCategory
+  description   String
+  amount        Decimal         @db.Decimal(12, 2)
+  date          DateTime
+  paymentMethod PaymentMethod
+  receiptRef    String?
+  createdById   String
+  createdBy     User            @relation("CreatedExpenses", fields: [createdById], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([date, category])
+}
+
+model Notification {
+  id         String              @id @default(cuid())
+  userId     String
+  customerId String?
+  type       NotificationType
+  channel    NotificationChannel @default(IN_APP)
+  title      String
+  message    String
+  actionUrl  String?
+  readAt     DateTime?
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer   Customer?           @relation(fields: [customerId], references: [id])
+  createdAt  DateTime            @default(now())
+
+  @@index([userId, readAt])
+}
+
+model BusinessSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tournament {
+  id                   String                     @id @default(cuid())
+  title                String
+  slug                 String                     @unique
+  description          String
+  format               TournamentFormat
+  registrationMode     TournamentRegistrationMode @default(BOTH)
+  skillLevel           String
+  startsAt             DateTime
+  endsAt               DateTime
+  registrationDeadline DateTime
+  location             String
+  entryFee             Decimal                    @default(0) @db.Decimal(12, 2)
+  maxRegistrations     Int?
+  teamSize             Int                        @default(2)
+  imageUrl             String?
+  featured             Boolean                    @default(false)
+  status               TournamentStatus           @default(DRAFT)
+  registrations        TournamentRegistration[]
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+
+  @@index([status, startsAt])
+  @@index([featured, status])
+}
+
+model TournamentRegistration {
+  id           String                       @id @default(cuid())
+  tournamentId String
+  mode         TournamentRegistrationMode
+  teamName     String?
+  captainName  String
+  captainEmail String
+  captainPhone String
+  notes        String?
+  status       TournamentRegistrationStatus @default(PENDING)
+  tournament   Tournament                   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  participants TournamentParticipant[]
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+
+  @@index([tournamentId, status])
+  @@index([captainEmail])
+}
+
+model TournamentParticipant {
+  id             String                 @id @default(cuid())
+  registrationId String
+  fullName       String
+  email          String
+  phone          String?
+  registration   TournamentRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime               @default(now())
+
+  @@index([registrationId])
+}
+
+model CourtWaitlistEntry {
+  id               String         @id @default(cuid())
+  customerId       String
+  courtId          String
+  startsAt         DateTime
+  durationMinutes  Int
+  status           WaitlistStatus @default(WAITING)
+  offeredAt        DateTime?
+  offerExpiresAt   DateTime?
+  claimedBookingId String?        @unique
+  customer         Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  court            Court          @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  claimedBooking   Booking?       @relation(fields: [claimedBookingId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([customerId, courtId, startsAt, durationMinutes])
+  @@index([courtId, startsAt, status])
+}
+
+model OpenPlay {
+  id             String                @id @default(cuid())
+  courtId        String
+  createdById    String
+  title          String
+  startsAt       DateTime
+  endsAt         DateTime
+  skillMin       Decimal               @default(2.00) @db.Decimal(4, 2)
+  skillMax       Decimal               @default(5.00) @db.Decimal(4, 2)
+  capacity       Int                   @default(4)
+  pricePerPlayer Decimal               @db.Decimal(12, 2)
+  competitive    Boolean               @default(false)
+  status         OpenPlayStatus        @default(OPEN)
+  notes          String?
+  court          Court                 @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdBy      User                  @relation("CreatedOpenPlays", fields: [createdById], references: [id])
+  participants   OpenPlayParticipant[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([courtId, startsAt, endsAt])
+  @@index([status, startsAt])
+}
+
+model OpenPlayParticipant {
+  id                   String                    @id @default(cuid())
+  openPlayId           String
+  customerId           String
+  status               OpenPlayParticipantStatus @default(JOINED)
+  paymentMethod        PaymentMethod
+  amount               Decimal                   @db.Decimal(12, 2)
+  transactionReference String?
+  paidAt               DateTime?
+  openPlay             OpenPlay                  @relation(fields: [openPlayId], references: [id], onDelete: Cascade)
+  customer             Customer                  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  payment              Payment?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+
+  @@unique([openPlayId, customerId])
+  @@index([openPlayId, status])
+}
+
+model BookingAccessPass {
+  id         String           @id @default(cuid())
+  bookingId  String           @unique
+  token      String           @unique @default(cuid())
+  validFrom  DateTime
+  validUntil DateTime
+  status     AccessPassStatus @default(ACTIVE)
+  usedAt     DateTime?
+  usedById   String?
+  booking    Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([token, status])
+}
+
+model WalletTransaction {
+  id           String                @id @default(cuid())
+  customerId   String
+  type         WalletTransactionType
+  amount       Decimal               @db.Decimal(12, 2)
+  balanceAfter Decimal               @db.Decimal(12, 2)
+  description  String
+  reference    String?
+  customer     Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime              @default(now())
+
+  @@index([customerId, createdAt])
+}
+
+model WalletTopUp {
+  id         String        @id @default(cuid())
+  customerId String
+  paymentId  String        @unique
+  amount     Decimal       @db.Decimal(12, 2)
+  status     PaymentStatus @default(PENDING)
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  payment    Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([customerId, status])
+}
+
+model PackagePlan {
+  id             String            @id @default(cuid())
+  name           String            @unique
+  description    String?
+  price          Decimal           @db.Decimal(12, 2)
+  bookingCredits Int
+  validityDays   Int
+  isActive       Boolean           @default(true)
+  purchases      PackagePurchase[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model PackagePurchase {
+  id               String                @id @default(cuid())
+  customerId       String
+  packagePlanId    String
+  creditsRemaining Int
+  startsAt         DateTime
+  expiresAt        DateTime
+  status           PackagePurchaseStatus @default(PENDING)
+  customer         Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  packagePlan      PackagePlan           @relation(fields: [packagePlanId], references: [id])
+  payments         Payment[]
+  bookings         Booking[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([customerId, status, expiresAt])
+}
+
+model GuestLead {
+  id                    String    @id @default(cuid())
+  email                 String
+  firstName             String
+  lastName              String
+  phone                 String
+  source                String    @default("PUBLIC_BOOKING")
+  verificationCodeHash  String?
+  verificationExpiresAt DateTime?
+  verifiedAt            DateTime?
+  convertedCustomerId   String?
+  bookingId             String?   @unique
+  convertedCustomer     Customer? @relation("ConvertedGuestCustomer", fields: [convertedCustomerId], references: [id])
+  booking               Booking?  @relation(fields: [bookingId], references: [id])
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([email, createdAt])
+}
+
+model DynamicPricingRule {
+  id                String   @id @default(cuid())
+  name              String
+  courtId           String?
+  weekday           Int?
+  startTime         String
+  endTime           String
+  adjustmentPercent Decimal  @db.Decimal(6, 2)
+  minimumLeadHours  Int?
+  maximumLeadHours  Int?
+  isActive          Boolean  @default(true)
+  court             Court?   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([courtId, weekday, isActive])
+}
+
+model League {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  skillMin    Decimal       @default(2.00) @db.Decimal(4, 2)
+  skillMax    Decimal       @default(5.00) @db.Decimal(4, 2)
+  startsAt    DateTime
+  endsAt      DateTime
+  maxPlayers  Int?
+  entryFee    Decimal       @default(0) @db.Decimal(12, 2)
+  status      LeagueStatus  @default(DRAFT)
+  entries     LeagueEntry[]
+  matches     LeagueMatch[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, startsAt])
+}
+
+model LeagueEntry {
+  id          String            @id @default(cuid())
+  leagueId    String
+  customerId  String
+  status      LeagueEntryStatus @default(PENDING)
+  wins        Int               @default(0)
+  losses      Int               @default(0)
+  points      Int               @default(0)
+  league      League            @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  customer    Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  homeMatches LeagueMatch[]     @relation("HomeLeagueEntry")
+  awayMatches LeagueMatch[]     @relation("AwayLeagueEntry")
+  payment     Payment?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([leagueId, customerId])
+  @@index([leagueId, status, points])
+}
+
+model LeagueMatch {
+  id             String            @id @default(cuid())
+  leagueId       String
+  homeEntryId    String
+  awayEntryId    String
+  scheduledAt    DateTime
+  homeScore      Int?
+  awayScore      Int?
+  winnerEntryId  String?
+  status         LeagueMatchStatus @default(SCHEDULED)
+  ratingSyncedAt DateTime?
+  league         League            @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  homeEntry      LeagueEntry       @relation("HomeLeagueEntry", fields: [homeEntryId], references: [id])
+  awayEntry      LeagueEntry       @relation("AwayLeagueEntry", fields: [awayEntryId], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([leagueId, scheduledAt, status])
+}
+
+model AutomationCampaign {
+  id          String           @id @default(cuid())
+  name        String
+  kind        AutomationKind
+  status      AutomationStatus @default(ACTIVE)
+  subject     String
+  message     String
+  actionUrl   String?
+  triggerDays Int              @default(30)
+  lastRunAt   DateTime?
+  createdById String
+  createdBy   User             @relation("CreatedAutomationCampaigns", fields: [createdById], references: [id])
+  runs        AutomationRun[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status, kind])
+}
+
+model AutomationRun {
+  id         String             @id @default(cuid())
+  campaignId String
+  recipients Int                @default(0)
+  campaign   AutomationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+
+  @@index([campaignId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
