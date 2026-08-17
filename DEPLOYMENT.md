@@ -18,7 +18,7 @@ Use **Render + Neon** for a client demo: Render hosts this full Node/Express app
 1. Create a free Neon project at [neon.com](https://neon.com), create a database, then copy its PostgreSQL connection string. Add `schema=public` to the query string: use `?schema=public` when there is no query string, or `&schema=public` when Neon already provides one.
 2. Create a private GitHub repository and push this project. Before pushing, confirm `.env` is ignored and never upload it. Rotate any email API key, SMTP/app password, or JWT secret that was ever copied into an example file or shared outside your password manager.
 3. Create a free Render account at [render.com](https://render.com), choose **New → Blueprint**, select the GitHub repository, and accept the `render.yaml` configuration.
-4. When Render asks for secrets, enter only `DATABASE_URL`, `EMAIL_API_KEY`, and `EMAIL_FROM`. Render generates the JWT secret. Use the Resend HTTP API for this free Render service; free Render web services cannot send SMTP traffic on ports 465 or 587.
+4. Create a free [SMTP2GO](https://www.smtp2go.com/pricing/) account, verify a sender email or sender domain, then create an SMTP user under **Sending → SMTP Users**. When Render asks for secrets, enter `DATABASE_URL`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and `MAIL_FROM`. Render generates the JWT secret. The Blueprint uses SMTP2GO on port `2525`, because free Render web services block the usual SMTP ports 25, 465, and 587. SMTP2GO's free plan currently includes up to 1,000 emails per month.
 5. Deploy. Render automatically uses its `RENDER_EXTERNAL_URL` as the application URL unless you later set `APP_URL` for a custom domain. The first build creates the schema and the demo data; later deployments preserve database records.
 6. Open the generated `onrender.com` URL. Check `/api/health`, register a test customer, and complete the flows in [docs/DEMO_RUNBOOK.md](./docs/DEMO_RUNBOOK.md).
 
@@ -37,6 +37,10 @@ JWT_SECRET=long-random-secret-at-least-32-characters
 APP_URL=https://your-public-domain.example
 
 # Choose SMTP OR the HTTP email provider.
+# For a free Render deployment with SMTP2GO, use port 2525 and STARTTLS:
+# MAIL_HOST=mail.smtp2go.com
+# MAIL_PORT=2525
+# MAIL_SMTPSecure=false
 MAIL_HOST=smtp.example.com
 MAIL_PORT=465
 MAIL_USERNAME=no-reply@example.com

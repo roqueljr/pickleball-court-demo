@@ -17,9 +17,17 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: EMAIL_API_URL
-        value: https://api.resend.com/emails
-      - key: EMAIL_API_KEY
+      # SMTP2GO's TLS submission port works on a free Render web service.
+      # The username, password, and sender must be entered privately in Render.
+      - key: MAIL_HOST
+        value: mail.smtp2go.com
+      - key: MAIL_PORT
+        value: "2525"
+      - key: MAIL_USERNAME
         sync: false
-      - key: EMAIL_FROM
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_SMTPSecure
+        value: "false"
+      - key: MAIL_FROM
         sync: false
